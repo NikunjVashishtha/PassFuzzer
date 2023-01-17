@@ -1,5 +1,5 @@
 # PassFuzzer
-PassFuzzer is a brute force tool that can be used to brute force most of the websites.
+PassFuzzer is a brute force tool that can be used to brute force most of the websites.<br>
 Based on Hatch [By: MetaChar]
 
 ## Commands
